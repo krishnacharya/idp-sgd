@@ -9,6 +9,9 @@ import pandas as pd
 import time
 import torch
 from numpy import ndarray
+import sys
+sys.path.append('../../opacus/')
+sys.path.append('../../')
 from opacus import PrivacyEngine
 from opacus.accountants.rdp import RDPAccountant
 from opacus.accountants.utils import assign_pp_values
