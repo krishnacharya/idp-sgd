@@ -29,12 +29,22 @@ from idp_sgd.training_utils.models import VGG
 
 user = getpass.getuser()
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 # DEFAULT SETTINGS
 n_workers = 6
 mode = "run"
 DATASET = "MNIST"
 save_path = '/mfsnic/projects/idpsgd/'
-mode = 'mia'  # debug run mia
+mode = 'debug'  # debug run mia
 dataset = 'MNIST'
 individualize = 'clipping'
 assign_budget = 'even'
@@ -46,6 +56,7 @@ if mode in ['run', 'mia']:
             np.arange(1000, 10001, 500))
 elif mode == 'debug':
     ALPHAS = RDPAccountant.DEFAULT_ALPHAS
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # for debuggin run on CPU
 else:
     raise Exception(f'Unknown mode: {mode}.')
 
@@ -176,13 +187,19 @@ parser.add_argument(
     'determined such that all given budgets exhaust after '
     'approximately the given number of epochs',
 )
+# parser.add_argument(
+#     '--use_cuda',
+#     type=str,
+#     default='True',
+#     choices={'False', 'True'},
+#     help='if use cuda or not',
+# )
 parser.add_argument(
     '--use_cuda',
-    type=str,
-    default='True',
-    choices={'False', 'True'},
-    help='if use cuda or not',
+    type=str2bool,
+    help='if use cuda or not, true or false',
 )
+
 parser.add_argument(
     '--save_path',
     type=str,
@@ -420,7 +437,8 @@ def initialize_training(dataset_name: str,
         f'seed: {seed},   '
         f'max_iteration: {int(round(epochs * n_data / batch_size))},   '
         f'1 epoch ~= {int(round(n_data / batch_size))} iterations')
-    device = 'cuda' if cuda else 'cpu'
+    # device = 'cuda' if cuda else 'cpu'
+    device = 'cpu' # hacky debugging rn
     train_loader = DataLoader(dataset=train_set,
                               batch_size=batch_size,
                               num_workers=n_workers,
