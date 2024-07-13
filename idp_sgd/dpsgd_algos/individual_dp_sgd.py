@@ -364,8 +364,7 @@ def get_mia_train_set_ppbudgets(dataset_name: str, epochs: int, n_workers: int,
                                 batch_size: int, seed: int, args, path: str,
                                 pp_budgets):
     assert args.mode == 'mia'
-    print("reached here", args.mia_count)
-    train_set = get_dataset(dataset_name=dataset_name, test=False)
+    train_set = get_dataset(dataset_name=dataset_name, args=args, test=False)
 
     save_path_idx = os.path.join(path, f'run{args.mia_count}')
     if not os.path.exists(save_path_idx):
