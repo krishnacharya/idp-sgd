@@ -9,9 +9,6 @@ import pandas as pd
 import time
 import torch
 from numpy import ndarray
-import sys
-sys.path.append('../../opacus/')
-sys.path.append('../../')
 from opacus import PrivacyEngine
 from opacus.accountants.rdp import RDPAccountant
 from opacus.accountants.utils import assign_pp_values
@@ -367,7 +364,7 @@ def get_mia_train_set_ppbudgets(dataset_name: str, epochs: int, n_workers: int,
                                 batch_size: int, seed: int, args, path: str,
                                 pp_budgets):
     assert args.mode == 'mia'
-
+    print("reached here", args.mia_count)
     train_set = get_dataset(dataset_name=dataset_name, test=False)
 
     save_path_idx = os.path.join(path, f'run{args.mia_count}')
