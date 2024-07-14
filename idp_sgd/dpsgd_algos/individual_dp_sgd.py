@@ -41,14 +41,19 @@ def str2bool(v):
 
 # DEFAULT SETTINGS
 n_workers = 6
-mode = "run"
-DATASET = "MNIST"
-save_path = '/mfsnic/projects/idpsgd/'
-mode = 'debug'  # debug run mia
-dataset = 'MNIST'
-individualize = 'clipping'
+
+save_path = '/mfsnic/projects/idpsgd/' # configure to your save_path
+mode = 'run'  # debug run mia
+# individualize = 'clipping'
+individualize = 'sampling'
+# individualize = "None"
 assign_budget = 'even'
+
+dataset = "MNIST"
 architecture = 'MNIST_CNN'
+
+# dataset = "CIFAR10"
+# architecture = 'CIFAR10_CNN'
 
 if mode in ['run', 'mia']:
     ALPHAS = RDPAccountant.DEFAULT_ALPHAS + list(np.arange(
@@ -56,7 +61,6 @@ if mode in ['run', 'mia']:
             np.arange(1000, 10001, 500))
 elif mode == 'debug':
     ALPHAS = RDPAccountant.DEFAULT_ALPHAS
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # for debuggin run on CPU
 else:
     raise Exception(f'Unknown mode: {mode}.')
 
@@ -187,16 +191,10 @@ parser.add_argument(
     'determined such that all given budgets exhaust after '
     'approximately the given number of epochs',
 )
-# parser.add_argument(
-#     '--use_cuda',
-#     type=str,
-#     default='True',
-#     choices={'False', 'True'},
-#     help='if use cuda or not',
-# )
 parser.add_argument(
     '--use_cuda',
     type=str2bool,
+    default=True,
     help='if use cuda or not, true or false',
 )
 
@@ -282,7 +280,7 @@ def idp_sgd_training(
     if privacy_engine.individualize == 'clipping':
         pp_max_grad_norms = assign_pp_values(
             pp_budgets=privacy_engine.pp_budgets,
-            values=privacy_engine.weights)
+            values=privacy_engine.weights).astype("float32") # float64 by default, issues with dtype later in Pytorch (fp32)
     termination = None
     current_batch_size, i = 0, 0
     start = time.time()
@@ -437,8 +435,8 @@ def initialize_training(dataset_name: str,
         f'seed: {seed},   '
         f'max_iteration: {int(round(epochs * n_data / batch_size))},   '
         f'1 epoch ~= {int(round(n_data / batch_size))} iterations')
-    # device = 'cuda' if cuda else 'cpu'
-    device = 'cpu' # hacky debugging rn
+    device = 'cuda' if cuda else 'cpu'
+    # device = 'cpu' # hacky debugging rn
     train_loader = DataLoader(dataset=train_set,
                               batch_size=batch_size,
                               num_workers=n_workers,
