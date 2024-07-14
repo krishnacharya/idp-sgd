@@ -40,20 +40,20 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 # DEFAULT SETTINGS
-n_workers = 6
+n_workers =  6
 
 save_path = '/mfsnic/projects/idpsgd/' # configure to your save_path
-mode = 'run'  # debug run mia
+mode = 'debug'  # use debug mode for cpu mode, cpu cant deal with multiple workers
 # individualize = 'clipping'
-individualize = 'sampling'
-# individualize = "None"
+# individualize = 'sampling'
+individualize = "None"
 assign_budget = 'even'
 
-dataset = "MNIST"
-architecture = 'MNIST_CNN'
+# dataset = "MNIST"
+# architecture = 'MNIST_CNN'
 
-# dataset = "CIFAR10"
-# architecture = 'CIFAR10_CNN'
+dataset = "CIFAR10"
+architecture = 'CIFAR10_CNN'
 
 if mode in ['run', 'mia']:
     ALPHAS = RDPAccountant.DEFAULT_ALPHAS + list(np.arange(
@@ -61,6 +61,7 @@ if mode in ['run', 'mia']:
             np.arange(1000, 10001, 500))
 elif mode == 'debug':
     ALPHAS = RDPAccountant.DEFAULT_ALPHAS
+    n_workers = 0
 else:
     raise Exception(f'Unknown mode: {mode}.')
 
@@ -435,8 +436,7 @@ def initialize_training(dataset_name: str,
         f'seed: {seed},   '
         f'max_iteration: {int(round(epochs * n_data / batch_size))},   '
         f'1 epoch ~= {int(round(n_data / batch_size))} iterations')
-    device = 'cuda' if cuda else 'cpu'
-    # device = 'cpu' # hacky debugging rn
+    device = 'cuda' if args.use_cuda else 'cpu'
     train_loader = DataLoader(dataset=train_set,
                               batch_size=batch_size,
                               num_workers=n_workers,
