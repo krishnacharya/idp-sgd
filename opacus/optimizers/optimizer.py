@@ -390,37 +390,62 @@ class DPOptimizer(Optimizer):
 
         self.step_hook = fn
 
-    def clip_and_accumulate(self, pp_max_grad_norms: ndarray = None):
-        """
-        Performs gradient clipping.
-        Stores clipped and aggregated gradients into `p.summed_grad```
+    # def clip_and_accumulate(self, pp_max_grad_norms: ndarray = None):
+    #     """
+    #     Performs gradient clipping.
+    #     Stores clipped and aggregated gradients into `p.summed_grad```
 
-        Args:
-            pp_max_grad_norms: Per-point clipping thresholds for points of
-            current iteration.
-        """
+    #     Args:
+    #         pp_max_grad_norms: Per-point clipping thresholds for points of
+    #         current iteration.
+    #     """
 
+    #     per_param_norms = [
+    #         g.reshape(len(g), -1).norm(2, dim=-1) for g in self.grad_samples
+    #     ]
+    #     per_sample_norms = torch.stack(per_param_norms, dim=1).norm(2, dim=1)
+    #     clip_threshold = self.max_grad_norm
+    #     if pp_max_grad_norms is not None:
+    #         # clip_threshold = torch.tensor(pp_max_grad_norms)
+    #         clip_threshold = torch.tensor(pp_max_grad_norms, device=per_sample_norms.device) # need on same device, hack for now!
+    #     per_sample_clip_factor = (clip_threshold / (per_sample_norms + 1e-6))\
+    #         .clamp(max=1.0)
+
+    #     for p in self.params:
+    #         _check_processed_flag(p.grad_sample)
+    #         grad_sample = self._get_flat_grad_sample(p)
+    #         grad = contract("i,i...", per_sample_clip_factor, grad_sample)
+
+    #         if p.summed_grad is not None:
+    #             p.summed_grad += grad
+    #         else:
+    #             p.summed_grad = grad
+
+    #         _mark_as_processed(p.grad_sample)
+
+    def clip_and_accumulate(self, pp_max_grad_norms: ndarray = None,
+                        stretch: bool = False):
+        
         per_param_norms = [
             g.reshape(len(g), -1).norm(2, dim=-1) for g in self.grad_samples
         ]
         per_sample_norms = torch.stack(per_param_norms, dim=1).norm(2, dim=1)
         clip_threshold = self.max_grad_norm
-        if pp_max_grad_norms is not None:
-            # clip_threshold = torch.tensor(pp_max_grad_norms)
-            clip_threshold = torch.tensor(pp_max_grad_norms, device=per_sample_norms.device) # need on same device, hack for now!
-        per_sample_clip_factor = (clip_threshold / (per_sample_norms + 1e-6))\
-            .clamp(max=1.0)
-
+        per_sample_clip_factor = (clip_threshold / (per_sample_norms + 1e-6))
+        per_sample_clip_factor = per_sample_clip_factor.clamp(max=1.0)
+        # pp_max_grad_norms are now used for rescaling after uniform clipping
+        pp_max_grad_norms = (1 if pp_max_grad_norms is None
+                            else pp_max_grad_norms / self.max_grad_norm)
+        per_sample_clip_factor *= torch.Tensor(pp_max_grad_norms).to(
+            per_sample_norms.device)
         for p in self.params:
             _check_processed_flag(p.grad_sample)
             grad_sample = self._get_flat_grad_sample(p)
             grad = contract("i,i...", per_sample_clip_factor, grad_sample)
-
             if p.summed_grad is not None:
                 p.summed_grad += grad
             else:
                 p.summed_grad = grad
-
             _mark_as_processed(p.grad_sample)
 
     def add_noise(self):
